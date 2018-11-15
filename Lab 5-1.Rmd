@@ -1,0 +1,127 @@
+---
+title: "Lab 5"
+output: 
+html_document:
+  toc: TRUE
+  toc_depth: 2
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(psych)
+
+```
+
+##Exploring the Data
+
+```{r}
+insurance <- read.csv("insurance.csv", stringsAsFactors = TRUE)
+
+#Setting stringsAsFactors = TRUE because we want to convert the three nominal variables into factors.
+
+```
+
+```{r}
+str(insurance)
+
+#Our model's dependent variable is "expenses," which measures the medical costs of each person in our dataset, depending on the values of the independent variable in our model.
+
+```
+
+```{r}
+summary(insurance$expenses)
+
+#Trying to analyze the normality of the "expenses" variable. Looking at the summary, we notice that the mean value is larger than the median, meaning that the skewness of this variable is right-leaning. We can view the skewness by creating a histogram.
+
+```
+
+```{r}
+hist(insurance$expenses, xlab = "Expenses", main = "Histogram of Insurance Expenses")
+
+#We can see that our prior suspicion of the "expenses" variable is confirmed. The majority of people in our dataset have medical expenses between $0 and $15000. Knowing the skewness of our data might help build a better-fitting regression model later on.
+
+```
+
+```{r}
+table(insurance$region)
+
+#We have another issue in our dataset. Regression models require that each variable be numeric, but we have three factor variables. We need to take a closer look at the "region" variable to understand how the data is distributed. The data is evenly distributed amongst the four levels of the "region" variable.
+
+```
+
+##Exploring Relationships Amongst Features
+
+```{r}
+cor(insurance[c("age", "bmi", "children", "expenses")])
+
+#There are no correlations that stand out, but some interesting ones. For example, as someone's age increases, their expenses increase moderately, as someone's age increaeses, their bmi tends to increase, and children do not necessarily lead to higher expenses.
+
+```
+
+```{r}
+pairs(insurance[c("age", "bmi", "children", "expenses")])
+
+#There are some notable patterns amongst the variables. For example, age and expenses displays several straight lines, while the relationship between bmi and expenses displays two distanct groups of points.
+
+```
+
+```{r}
+pairs.panels(insurance[c("age", "bmi", "children", "expenses")])
+
+#Above the diagonals there is now a correlation matrix. The oval-shaped object on each scatterplot is called a correlation ellipse - it provides a visualization of correlation strength. The curve drawn on the scatterplot is called the loess curve - it indicates the general relationship between the x and y variables.
+
+```
+
+##Training a Model on the Data
+
+```{r}
+ins_model <- lm(expenses ~ age + children + bmi + sex + smoker + region, data = insurance)
+
+#Fitting a linear regression model depending on our six independent variables.
+
+ins_model
+
+#The coefficients are fairly straightforward to understand. For example, an increase in a year of age will result in $256.9 of higher expenses. Also, if the gender is male, then medical expenses are lower by $131.3.
+
+```
+
+##Evaluating Model Performance
+
+```{r}
+summary(ins_model)
+
+#Since there is a maximum error of 29992.8, we can conclude that the model under-predicted expenses by ~$30,000 for at least one observation. However, 50% of the errors occur between the 1st and 3rd quartiles values, so the majority of the predictions in our model were between $2,848 over the true value and $1,393.9 under the true value. Also, note that some of the coefficients have stars next to them to indicate their significance level in our model. We can assume that coefficients with stars on them are statistically significant at some level. Finally, the R-squared and Adjusted R-squared model speak to the "goodness-of-fit" of our model, or in other words, how good our model is at predicting the dependent variable. This value is measured between 0 and 1 and a value closer to 1 is better, so an R-squared of .7509 is fairly good.
+
+```
+
+##Improving Model Performance
+
+```{r}
+insurance$age2 <- insurance$age^2
+
+#Accounting for a possible non-linear relationship between age and insurance expenses by squaring the age variable.
+
+```
+
+```{r}
+insurance$bmi30 <- ifelse(insurance$bmi >= 30, 1, 0)
+
+#Accounting for a possible non-cumulative relationship between bmi and insurance expenses by creating a binary variable for bmi.
+
+```
+
+```{r}
+ins_model2 <- lm(expenses ~ age + age2 + children + bmi + sex + bmi30*smoker + region, data = insurance)
+
+#Notice I also added an interaction effect between bmi30 and smoker to show a combined effect.
+
+summary(ins_model2)
+
+#Relative to our first model, the Adjusted R-squared value has increased to ~.87 from .7494, which is a positive sign. This means that our model is explaining about 87% of the model's variation. Also, the maximum error value decreased to 24160.2 from 29992.8 in our first model. Also, the interaction between smoking and obesity is massive - those who are obese and those who smoke spend over $19000 more on medical expenses than those who do not smoke and those who are not obese.
+
+```
+
